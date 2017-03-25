@@ -1,0 +1,31 @@
+version: '2'
+
+networks:
+  valet:
+    external: true
+
+services:
+  dns:
+    image: andyshinn/dnsmasq
+    networks:
+      - valet
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    cap_add:
+      - NET_ADMIN
+    command: --address=/dev/${DOCKER_IP} --log-facilty=-
+    restart: always
+
+  valet:
+    image: traefik:1.2.0-alpine
+    networks:
+      - valet
+    ports:
+      - "80:80"
+      - "9080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /dev/null:/traefik.toml
+    command: --web --docker --logLevel=DEBUG
+    restart: always

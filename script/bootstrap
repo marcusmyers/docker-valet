@@ -1,0 +1,18 @@
+#!/bin/bash
+
+INTERFACE=$1
+
+export DOCKER_IP=$(ip -4 addr show $INTERFACE | grep -Po 'inet \K[\d.]+')
+
+if [[ $(docker network ls --filter="name=valet" -q) == "" ]]; then
+  docker network create valet
+fi
+
+if [[ ! -a /etc/resolver/dev || "$(grep $DOCKER_IP /etc/resolver/dev)" == "" ]]; then
+  sudo mkdir -p /etc/resolver
+  cat << RESOLVER_EOF | sudo tee /etc/resolver/dev
+nameserver $DOCKER_IP
+RESOLVER_EOF
+fi
+
+docker-compose up -d
