@@ -1,8 +1,11 @@
 #!/bin/bash
 
 INTERFACE=$1
-
-export DOCKER_IP=$(ip -4 addr show $INTERFACE | grep -Po 'inet \K[\d.]+')
+if [[ -a /Applications/Docker.app ]]; then
+  export DOCKER_IP=localhost
+else
+  export DOCKER_IP=$(ip -4 addr show $INTERFACE | grep -Po 'inet \K[\d.]+')
+fi
 
 if [[ $(docker network ls --filter="name=valet" -q) == "" ]]; then
   docker network create valet
