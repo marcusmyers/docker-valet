@@ -1,21 +1,32 @@
 #!/bin/bash
 
+get_os() {
+  uname -s
+}
+OS=`get_os`
+
 INTERFACE=$1
-if [[ -a /Applications/Docker.app ]]; then
-  export DOCKER_IP=localhost
-else
-  export DOCKER_IP=$(ip -4 addr show $INTERFACE | grep -Po 'inet \K[\d.]+')
-fi
+
+export DOCKER_IP=127.0.0.1
 
 if [[ $(docker network ls --filter="name=valet" -q) == "" ]]; then
   docker network create valet
 fi
 
-if [[ ! -a /etc/resolver/dev || "$(grep $DOCKER_IP /etc/resolver/dev)" == "" ]]; then
-  sudo mkdir -p /etc/resolver
-  cat << RESOLVER_EOF | sudo tee /etc/resolver/dev
+if [[ $OS == "Linux" ]]; then
+  if [[ "$(grep $DOCKER_IP /etc/resolvconf/resolv.conf.d/head)" == "" ]]; then
+    cat << VALET_EOF | sudo tee -a /etc/resolvconf/resolv.conf.d/head
+nameserver $DOCKER_IP
+VALET_EOF
+    sudo pkill dnsmasq
+  fi
+else
+  if [[ ! -a /etc/resolver/dev || "$(grep $DOCKER_IP /etc/resolver/dev)" == "" ]]; then
+    sudo mkdir -p /etc/resolver
+    cat << RESOLVER_EOF | sudo tee /etc/resolver/dev
 nameserver $DOCKER_IP
 RESOLVER_EOF
+  fi
 fi
 
 docker-compose up -d
