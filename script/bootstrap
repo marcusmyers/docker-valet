@@ -5,6 +5,11 @@ get_os() {
 }
 OS=`get_os`
 
+if [[ $OS == "Linux" ]]; then
+  OS=`lsb_release -i | awk -F ' ' '{print $3}'`
+  VERSION=`lsb_release -r | awk -F ' ' '{print $2}'`
+fi
+
 INTERFACE=$1
 
 export DOCKER_IP=127.0.0.1
@@ -13,12 +18,16 @@ if [[ $(docker network ls --filter="name=valet" -q) == "" ]]; then
   docker network create valet
 fi
 
-if [[ $OS == "Linux" ]]; then
+if [[ $OS == "Ubuntu" ]]; then
+  sudo sed -i 's/dns=dnsmasq/#dnsmasq/' /etc/NetworkManager/NetworkManager.conf
+  sudo pkill dnsmasq
   if [[ "$(grep $DOCKER_IP /etc/resolvconf/resolv.conf.d/head)" == "" ]]; then
     cat << VALET_EOF | sudo tee -a /etc/resolvconf/resolv.conf.d/head
 nameserver $DOCKER_IP
 VALET_EOF
-    sudo pkill dnsmasq
+    if [[ $VERSION == "16.04" ]]; then
+      sudo systemctl restart NetworkManager.service
+    fi
   fi
 else
   if [[ ! -a /etc/resolver/dev || "$(grep $DOCKER_IP /etc/resolver/dev)" == "" ]]; then
